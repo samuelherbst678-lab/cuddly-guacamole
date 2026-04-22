@@ -1,1 +1,248 @@
-k
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Election Dashboard</title>
+
+<style>
+body {
+    margin: 0;
+    background: #0b1c2c;
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 30px;
+}
+
+.year {
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.title {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* LAYOUT */
+.container {
+    display: flex;
+    padding: 20px;
+}
+
+/* LEFT SIDE */
+.left {
+    width: 45%;
+}
+
+/* PARTY CARD */
+.party {
+    display: flex;
+    align-items: center;
+    border-radius: 16px;
+    margin-bottom: 15px;
+    padding: 12px;
+}
+
+.party img {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+.info {
+    flex: 1;
+}
+
+.name {
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.percent {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.small {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.seats {
+    font-size: 40px;
+    font-weight: bold;
+    text-align: right;
+}
+
+/* INPUTS */
+.controls input {
+    width: 100%;
+    margin: 2px 0;
+}
+
+/* RIGHT SIDE */
+.right {
+    width: 55%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* HALF CIRCLE */
+.canvas-wrap {
+    position: relative;
+}
+
+.total {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 32px;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <div>
+        <div class="year" contenteditable="true">2006</div>
+        <div class="title" contenteditable="true">
+            PRIME MINISTER AFTER ELECTION
+        </div>
+    </div>
+    <div contenteditable="true">HUNGARY</div>
+</div>
+
+<div class="container">
+
+    <div class="left" id="parties"></div>
+
+    <div class="right">
+        <div class="canvas-wrap">
+            <canvas id="chart" width="600" height="350"></canvas>
+            <div class="total" id="total">0</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+let parties = [
+    {name:"MSZP", percent:43.21, seats:190, color:"#d8435c", img:""},
+    {name:"FIDESZ", percent:42.03, seats:164, color:"#f57c00", img:""},
+    {name:"SZDSZ", percent:6.5, seats:20, color:"#1976d2", img:""},
+    {name:"MDF", percent:5.04, seats:11, color:"#4caf50", img:""}
+];
+
+function render() {
+    const container = document.getElementById("parties");
+    container.innerHTML = "";
+
+    parties.forEach((p,i)=>{
+
+        let div = document.createElement("div");
+        div.className = "party";
+        div.style.background = p.color;
+
+        div.innerHTML = `
+            <img src="${p.img || 'https://via.placeholder.com/80'}" id="img${i}">
+            
+            <div class="info">
+                <div class="name" contenteditable oninput="update(${i},'name',this.innerText)">${p.name}</div>
+                <div class="percent" contenteditable oninput="update(${i},'percent',this.innerText)">${p.percent}%</div>
+                <div class="small">votes</div>
+
+                <div class="controls">
+                    <input type="number" value="${p.seats}" onchange="update(${i},'seats',this.value)">
+                    <input type="color" value="${p.color}" onchange="update(${i},'color',this.value)">
+                    <input type="file" onchange="upload(event,${i})">
+                </div>
+            </div>
+
+            <div class="seats">${p.seats}</div>
+        `;
+
+        container.appendChild(div);
+    });
+
+    draw();
+}
+
+function update(i,key,val){
+    if(key==="seats") val = Number(val);
+    if(key==="percent") val = parseFloat(val);
+    parties[i][key]=val;
+    render();
+}
+
+function upload(e,i){
+    let file = e.target.files[0];
+    let reader = new FileReader();
+    reader.onload = function(ev){
+        parties[i].img = ev.target.result;
+        render();
+    }
+    reader.readAsDataURL(file);
+}
+
+/* PUNKT-HALBKREIS (wie im Bild) */
+function draw(){
+    let canvas = document.getElementById("chart");
+    let ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0,0,600,350);
+
+    let total = parties.reduce((a,b)=>a+b.seats,0);
+    document.getElementById("total").innerText = total;
+
+    let seatsArray = [];
+
+    parties.forEach(p=>{
+        for(let i=0;i<p.seats;i++){
+            seatsArray.push(p.color);
+        }
+    });
+
+    let rows = 6;
+    let maxPerRow = Math.ceil(seatsArray.length / rows);
+
+    let index = 0;
+
+    for(let r=0;r<rows;r++){
+        let radius = 200 - r*25;
+        let seatsInRow = Math.min(maxPerRow, seatsArray.length - index);
+
+        for(let i=0;i<seatsInRow;i++){
+            let angle = Math.PI * (i/(seatsInRow-1));
+
+            let x = 300 + radius * Math.cos(angle);
+            let y = 300 - radius * Math.sin(angle);
+
+            ctx.beginPath();
+            ctx.arc(x,y,6,0,2*Math.PI);
+            ctx.fillStyle = seatsArray[index];
+            ctx.fill();
+
+            index++;
+        }
+    }
+}
+
+render();
+
+</script>
+
+</body>
+</html>
